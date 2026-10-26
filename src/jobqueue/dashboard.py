@@ -15,6 +15,8 @@ from jobqueue.queue import JobQueue
 
 logger = logging.getLogger("jobqueue.dashboard")
 
+MAX_REQUEST_BODY_SIZE = 16 * 1024  # 16 KB capped request body
+
 
 def get_dashboard_html() -> str:
     """Load the dashboard HTML UI template."""
@@ -155,12 +157,22 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if not self._validate_host():
             return
 
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path
+
         if path.startswith("/api/requeue/") or path == "/api/enqueue":
             if not self._validate_csrf_and_origin():
                 return
 
         content_length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(content_length) if content_length > 0 else b""
+        if content_length > MAX_REQUEST_BODY_SIZE:
+            self._send_json(
+                {"error": "Payload Too Large: Maximum request body size is 16 KB"},
+                status=413,
+            )
+            return
+
+        body = self.rfile.read(min(content_length, MAX_REQUEST_BODY_SIZE)) if content_length > 0 else b""
 
         q = JobQueue(self.db_path)
         try:
