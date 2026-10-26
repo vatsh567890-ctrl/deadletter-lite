@@ -60,6 +60,7 @@ class Worker:
 
     def execute_handler(self, handler: Callable[..., Any], payload: str) -> Any:
         """Execute a task handler with optional payload parsing and timeout."""
+
         def run_fn() -> Any:
             try:
                 return handler(payload)
@@ -273,6 +274,7 @@ def _worker_process_target(
     stop_event: Any,
 ) -> None:
     """Entry point for a spawned child worker process."""
+
     # Setup signal handlers in child process
     def handle_signal(sig: int, frame: Any) -> None:
         stop_event.set()

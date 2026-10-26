@@ -150,16 +150,18 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 return
 
             if path.startswith("/api/jobs/"):
-                job_id = path[len("/api/jobs/"):]
+                job_id = path[len("/api/jobs/") :]
                 job = q.get(job_id)
                 if job is None:
                     self._send_json({"error": f"Job {job_id} not found"}, status=404)
                     return
                 attempts = q.get_attempts(job_id)
-                self._send_json({
-                    "job": job.to_dict(),
-                    "attempts": [a.to_dict() for a in attempts],
-                })
+                self._send_json(
+                    {
+                        "job": job.to_dict(),
+                        "attempts": [a.to_dict() for a in attempts],
+                    }
+                )
                 return
 
             self._send_json({"error": "Not found"}, status=404)
@@ -192,7 +194,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         q = JobQueue(self.db_path)
         try:
             if path.startswith("/api/requeue/"):
-                job_id = path[len("/api/requeue/"):]
+                job_id = path[len("/api/requeue/") :]
                 try:
                     requeued = q.requeue(job_id)
                     self._send_json({"success": True, "job": requeued.to_dict()})

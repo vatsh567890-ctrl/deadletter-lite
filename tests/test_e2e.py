@@ -15,7 +15,10 @@ from jobqueue.worker import WorkerPool
 
 
 def test_e2e_workers_and_dashboard_counts(tmp_path: Path) -> None:
-    """Enqueue succeeding and failing jobs, run real worker pool, and assert dashboard counts match DB."""
+    """Enqueue succeeding and failing jobs, run real worker pool.
+
+    Assert dashboard counts match DB.
+    """
     db_path = tmp_path / "e2e_integration.db"
     q = JobQueue(db_path)
 

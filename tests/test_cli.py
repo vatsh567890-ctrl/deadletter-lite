@@ -18,12 +18,17 @@ def test_cli_enqueue_and_inspect(tmp_path: Path) -> None:
 
     stdout_buf = io.StringIO()
     with redirect_stdout(stdout_buf):
-        exit_code = main([
-            "enqueue",
-            "--task", "send_email",
-            "--payload", '{"to": "test@example.com"}',
-            "--db", db_path,
-        ])
+        exit_code = main(
+            [
+                "enqueue",
+                "--task",
+                "send_email",
+                "--payload",
+                '{"to": "test@example.com"}',
+                "--db",
+                db_path,
+            ]
+        )
     assert exit_code == 0
     output = stdout_buf.getvalue()
     assert "Enqueued job" in output
@@ -106,11 +111,15 @@ def test_cli_environment_variable_defaults(tmp_path: Path) -> None:
 
     stdout_buf = io.StringIO()
     with redirect_stdout(stdout_buf):
-        exit_code = main([
-            "enqueue",
-            "--task", "env_task",
-            "--payload", '{"from": "env"}',
-        ])
+        exit_code = main(
+            [
+                "enqueue",
+                "--task",
+                "env_task",
+                "--payload",
+                '{"from": "env"}',
+            ]
+        )
     assert exit_code == 0
 
     assert Path(db_path).exists()

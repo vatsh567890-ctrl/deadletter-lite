@@ -371,9 +371,7 @@ class Storage:
         RETURNING lease_expires_at;
         """
         with immediate_transaction(self.conn):
-            cursor = self.conn.execute(
-                query, (new_lease_expires_at, now, job_id, lease_token)
-            )
+            cursor = self.conn.execute(query, (new_lease_expires_at, now, job_id, lease_token))
             row = cursor.fetchone()
             if row is None:
                 msg = f"Lease renewal rejected: token {lease_token} lost for job {job_id}"

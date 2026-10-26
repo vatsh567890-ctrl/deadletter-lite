@@ -96,11 +96,13 @@ def test_dashboard_server_endpoints(running_server: tuple[str, Path, int]) -> No
         assert res["job"]["status"] == JobStatus.QUEUED.value
 
     # 6. POST /api/enqueue
-    new_job_payload = json.dumps({
-        "task_name": "api_task",
-        "payload": '{"foo": "bar"}',
-        "max_attempts": 5,
-    }).encode("utf-8")
+    new_job_payload = json.dumps(
+        {
+            "task_name": "api_task",
+            "payload": '{"foo": "bar"}',
+            "max_attempts": 5,
+        }
+    ).encode("utf-8")
     enqueue_req = urllib.request.Request(
         f"{base_url}/api/enqueue",
         data=new_job_payload,

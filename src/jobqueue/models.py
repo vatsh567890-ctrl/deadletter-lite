@@ -138,9 +138,7 @@ class Attempt:
             attempt_number=int(row["attempt_number"]),
             worker_id=str(row["worker_id"]),
             started_at=float(row["started_at"]),
-            finished_at=(
-                float(row["finished_at"]) if row["finished_at"] is not None else None
-            ),
+            finished_at=(float(row["finished_at"]) if row["finished_at"] is not None else None),
             outcome=AttemptOutcome(row["outcome"]),
             error=row["error"],
         )

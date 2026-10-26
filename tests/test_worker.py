@@ -315,4 +315,3 @@ def test_worker_pool_execution_with_handlers_module(tmp_path: Path) -> None:
     pool.stop(timeout=3.0)
     assert all_done
     verify_q.close()
-

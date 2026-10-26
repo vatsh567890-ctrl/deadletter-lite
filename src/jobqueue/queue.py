@@ -115,8 +115,7 @@ class JobQueue:
             raise JobNotFoundError(msg)
         if existing.status != JobStatus.RUNNING:
             msg = (
-                f"Cannot ack job {job_id} with status '{existing.status.value}'. "
-                f"Must be 'running'."
+                f"Cannot ack job {job_id} with status '{existing.status.value}'. Must be 'running'."
             )
             raise InvalidStateTransitionError(msg)
         if existing.lease_token != lease_token:
