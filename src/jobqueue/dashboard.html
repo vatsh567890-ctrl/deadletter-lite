@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>jobqueue dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --card-hover: #1e293b;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+      --queued: #f59e0b;
+      --queued-bg: rgba(245, 158, 11, 0.12);
+      --running: #0ea5e9;
+      --running-bg: rgba(14, 165, 233, 0.12);
+      --done: #10b981;
+      --done-bg: rgba(16, 185, 129, 0.12);
+      --dead: #ef4444;
+      --dead-bg: rgba(239, 68, 68, 0.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(17, 24, 39, 0.8);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .nav-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.025em;
+    }
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), #a855f7);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .brand-logo svg { width: 18px; height: 18px; fill: white; }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #4f46e5;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .btn-secondary {
+      background: var(--card-bg);
+      color: var(--text-main);
+      border-color: var(--card-border);
+    }
+    .btn-secondary:hover {
+      background: var(--card-hover);
+      border-color: #374151;
+    }
+
+    .btn-requeue {
+      background: var(--dead-bg);
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.3);
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+    }
+    .btn-requeue:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+
+    main {
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: #374151;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .stat-card.queued::before { background: var(--queued); }
+    .stat-card.running::before { background: var(--running); }
+    .stat-card.done::before { background: var(--done); }
+    .stat-card.dead::before { background: var(--dead); }
+    .stat-card.total::before { background: var(--accent); }
+
+    .stat-title {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+      font-feature-settings: "tnum";
+    }
+
+    /* Filters and Controls */
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 0.875rem 1.25rem;
+      border-radius: 10px;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .filter-tab {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .filter-tab:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .filter-tab.active {
+      background: var(--card-hover);
+      color: var(--text-main);
+      border-color: #374151;
+    }
+
+    .search-input {
+      background: #0b0f19;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 0.45rem 0.85rem;
+      color: var(--text-main);
+      font-size: 0.875rem;
+      outline: none;
+      min-width: 240px;
+      font-family: inherit;
+    }
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+
+    /* Jobs Table */
+    .table-container {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.875rem;
+    }
+
+    th {
+      background: #0d1320;
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--card-border);
+      vertical-align: middle;
+    }
+
+    tbody tr {
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge.queued { background: var(--queued-bg); color: var(--queued); }
+    .badge.running { background: var(--running-bg); color: var(--running); }
+    .badge.done { background: var(--done-bg); color: var(--done); }
+    .badge.dead { background: var(--dead-bg); color: var(--dead); }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8125rem;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: grid;
+      place-items: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      width: 90%;
+      max-width: 720px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .code-box {
+      background: #080c14;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8125rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      color: #38bdf8;
+    }
+
+    .attempts-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .attempt-item {
+      background: #0d1320;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.875rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .attempt-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .attempt-error {
+      color: #f87171;
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(239, 68, 68, 0.08);
+      padding: 0.4rem 0.6rem;
+      border-radius: 4px;
+      margin-top: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <span>jobqueue</span>
+      </div>
+      <div class="header-actions">
+        <button id="btn-refresh" class="btn btn-secondary">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Refresh
+        </button>
+        <button id="btn-new-job" class="btn btn-primary">+ Enqueue Job</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="stats-grid">
+      <div class="stat-card total">
+        <div class="stat-title">Total Jobs</div>
+        <div class="stat-value" id="stat-total">-</div>
+      </div>
+      <div class="stat-card queued">
+        <div class="stat-title">Queued</div>
+        <div class="stat-value" id="stat-queued" style="color: var(--queued)">-</div>
+      </div>
+      <div class="stat-card running">
+        <div class="stat-title">Running</div>
+        <div class="stat-value" id="stat-running" style="color: var(--running)">-</div>
+      </div>
+      <div class="stat-card done">
+        <div class="stat-title">Completed</div>
+        <div class="stat-value" id="stat-done" style="color: var(--done)">-</div>
+      </div>
+      <div class="stat-card dead">
+        <div class="stat-title">Dead-Letter</div>
+        <div class="stat-value" id="stat-dead" style="color: var(--dead)">-</div>
+      </div>
+    </div>
+
+    <div class="controls-bar">
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-status="">All</button>
+        <button class="filter-tab" data-status="queued">Queued</button>
+        <button class="filter-tab" data-status="running">Running</button>
+        <button class="filter-tab" data-status="done">Done</button>
+        <button class="filter-tab" data-status="dead">Dead</button>
+      </div>
+      <input type="text" id="search-box" class="search-input" placeholder="Filter by Task or ID...">
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Job ID</th>
+            <th>Task</th>
+            <th>Status</th>
+            <th>Attempts</th>
+            <th>Queue</th>
+            <th>Updated</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="jobs-table-body">
+          <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem;">Loading jobs...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Job Detail Modal -->
+  <div id="job-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-job-title">Job Details</div>
+        <button class="btn btn-secondary" onclick="closeModal('job-modal')">Close</button>
+      </div>
+      <div class="modal-body" id="modal-job-content">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Enqueue Job Modal -->
+  <div id="enqueue-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Enqueue New Job</div>
+        <button class="btn btn-secondary" onclick="closeModal('enqueue-modal')">Cancel</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label style="font-size: 0.85rem; font-weight: 500;">Task Name</label>
+          <input type="text" id="new-task-name" class="search-input" placeholder="e.g. echo, process_data">
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label style="font-size: 0.85rem; font-weight: 500;">Payload (JSON)</label>
+          <textarea id="new-task-payload" class="search-input" style="height: 100px; resize: vertical;" placeholder='{"message": "hello"}'></textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <label style="font-size: 0.85rem; font-weight: 500;">Max Attempts</label>
+            <input type="number" id="new-task-max-attempts" class="search-input" value="3" min="1">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <label style="font-size: 0.85rem; font-weight: 500;">Queue Name</label>
+            <input type="text" id="new-task-queue" class="search-input" value="default">
+          </div>
+        </div>
+        <button id="btn-submit-job" class="btn btn-primary" style="margin-top: 1rem;">Enqueue</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentStatusFilter = "";
+    let jobsData = [];
+
+    async function fetchStats() {
+      try {
+        const res = await fetch("/api/stats");
+        if (!res.ok) return;
+        const stats = await res.json();
+        document.getElementById("stat-queued").innerText = stats.queued || 0;
+        document.getElementById("stat-running").innerText = stats.running || 0;
+        document.getElementById("stat-done").innerText = stats.done || 0;
+        document.getElementById("stat-dead").innerText = stats.dead || 0;
+        document.getElementById("stat-total").innerText = stats.total || 0;
+      } catch (err) {
+        console.error("Error fetching stats:", err);
+      }
+    }
+
+    async function fetchJobs() {
+      try {
+        const url = `/api/jobs?status=${encodeURIComponent(currentStatusFilter)}&limit=100`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        jobsData = await res.json();
+        renderJobsTable();
+      } catch (err) {
+        console.error("Error fetching jobs:", err);
+      }
+    }
+
+    function renderJobsTable() {
+      const tbody = document.getElementById("jobs-table-body");
+      const search = document.getElementById("search-box").value.toLowerCase();
+      const filtered = jobsData.filter(j => 
+        j.id.toLowerCase().includes(search) || 
+        j.task_name.toLowerCase().includes(search)
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem;">No jobs found</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(job => {
+        const dateStr = new Date(job.updated_at * 1000).toLocaleTimeString();
+        const requeueBtn = job.status === "dead" 
+          ? `<button class="btn btn-requeue" onclick="event.stopPropagation(); requeueJob('${job.id}')">Requeue</button>`
+          : "";
+
+        return `
+          <tr onclick="inspectJob('${job.id}')">
+            <td class="font-mono">${job.id.substring(0, 8)}...</td>
+            <td style="font-weight: 500;">${job.task_name}</td>
+            <td><span class="badge ${job.status}">${job.status}</span></td>
+            <td>${job.attempts} / ${job.max_attempts}</td>
+            <td class="font-mono">${job.queue_name}</td>
+            <td style="color: var(--text-muted);">${dateStr}</td>
+            <td style="text-align: right;">${requeueBtn}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function inspectJob(jobId) {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const job = data.job;
+        const attempts = data.attempts || [];
+
+        let payloadPretty = job.payload;
+        try {
+          payloadPretty = JSON.stringify(JSON.parse(job.payload), null, 2);
+        } catch (_) {}
+
+        const attemptsHtml = attempts.map(att => `
+          <div class="attempt-item">
+            <div class="attempt-meta">
+              <span>Attempt #${att.attempt_number} (Worker: <span class="font-mono">${att.worker_id}</span>)</span>
+              <span class="badge ${att.outcome}">${att.outcome}</span>
+            </div>
+            ${att.error ? `<div class="attempt-error">${att.error}</div>` : ""}
+          </div>
+        `).join("") || `<div style="color: var(--text-muted); font-size: 0.85rem;">No attempts recorded yet.</div>`;
+
+        const modalBody = document.getElementById("modal-job-content");
+        modalBody.innerHTML = `
+          <div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">JOB ID</div>
+            <div class="font-mono" style="font-size: 0.95rem; font-weight: 600;">${job.id}</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">TASK</div>
+              <div style="font-weight: 500;">${job.task_name}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">STATUS</div>
+              <span class="badge ${job.status}">${job.status}</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">PAYLOAD</div>
+            <div class="code-box">${payloadPretty}</div>
+          </div>
+          <div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">ATTEMPTS HISTORY</div>
+            <div class="attempts-timeline">${attemptsHtml}</div>
+          </div>
+          ${job.status === "dead" ? `
+            <button class="btn btn-requeue" style="align-self: flex-start; margin-top: 0.5rem;" onclick="requeueJob('${job.id}'); closeModal('job-modal');">
+              Requeue Job
+            </button>
+          ` : ""}
+        `;
+
+        document.getElementById("job-modal").classList.add("open");
+      } catch (err) {
+        console.error("Error inspecting job:", err);
+      }
+    }
+
+    async function requeueJob(jobId) {
+      try {
+        const res = await fetch(`/api/requeue/${jobId}`, { method: "POST" });
+        if (res.ok) {
+          fetchStats();
+          fetchJobs();
+        }
+      } catch (err) {
+        console.error("Error requeuing job:", err);
+      }
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove("open");
+    }
+
+    // Event Listeners
+    document.getElementById("btn-refresh").addEventListener("click", () => {
+      fetchStats();
+      fetchJobs();
+    });
+
+    document.getElementById("search-box").addEventListener("input", renderJobsTable);
+
+    document.querySelectorAll(".filter-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".filter-tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        currentStatusFilter = tab.dataset.status;
+        fetchJobs();
+      });
+    });
+
+    document.getElementById("btn-new-job").addEventListener("click", () => {
+      document.getElementById("enqueue-modal").classList.add("open");
+    });
+
+    document.getElementById("btn-submit-job").addEventListener("click", async () => {
+      const taskName = document.getElementById("new-task-name").value.trim();
+      const payloadStr = document.getElementById("new-task-payload").value.trim() || "{}";
+      const maxAttempts = parseInt(document.getElementById("new-task-max-attempts").value) || 3;
+      const queueName = document.getElementById("new-task-queue").value.trim() || "default";
+
+      if (!taskName) {
+        alert("Please specify a task name");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/enqueue", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            task_name: taskName,
+            payload: payloadStr,
+            max_attempts: maxAttempts,
+            queue_name: queueName,
+          })
+        });
+        if (res.ok) {
+          closeModal("enqueue-modal");
+          fetchStats();
+          fetchJobs();
+        } else {
+          const errData = await res.json();
+          alert("Error: " + (errData.error || "Failed to enqueue"));
+        }
+      } catch (err) {
+        alert("Error enqueuing: " + err);
+      }
+    });
+
+    // Auto-refresh every 3s
+    fetchStats();
+    fetchJobs();
+    setInterval(() => {
+      fetchStats();
+      fetchJobs();
+    }, 3000);
+  </script>
+</body>
+</html>
