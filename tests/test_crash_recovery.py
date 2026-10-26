@@ -7,6 +7,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from jobqueue.models import AttemptOutcome, JobStatus
 from jobqueue.queue import JobQueue
 
@@ -21,6 +23,7 @@ def _crashing_worker_process(db_path_str: str, worker_id: str, started_event: An
     time.sleep(60.0)
 
 
+@pytest.mark.slow
 def test_crash_recovery_expired_lease_reclaimed(tmp_path: Path) -> None:
     """When a worker process holding a lease crashes, the expired job is reclaimed.
 
