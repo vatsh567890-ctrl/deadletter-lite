@@ -243,8 +243,9 @@ def test_worker_pool_execution_with_handlers_module(tmp_path: Path) -> None:
 
     # Wait for all jobs to complete
     verify_q = JobQueue(db_path)
+    deadline = time.time() + 15.0
     all_done = False
-    for _ in range(30):
+    while time.time() < deadline:
         statuses = []
         for j in jobs:
             item = verify_q.get(j.id)
@@ -253,6 +254,7 @@ def test_worker_pool_execution_with_handlers_module(tmp_path: Path) -> None:
         if len(statuses) == 3 and all(s == JobStatus.DONE for s in statuses):
             all_done = True
             break
+        time.sleep(0.1)
 
     pool.stop(timeout=3.0)
     assert all_done
