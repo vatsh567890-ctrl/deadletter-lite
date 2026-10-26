@@ -71,12 +71,44 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             return False
         return True
 
+    def _validate_csrf_and_origin(self) -> bool:
+        """Enforce X-Requested-With: jobqueue and reject any non-local Origin."""
+        x_req = self.headers.get("X-Requested-With")
+        if x_req != "jobqueue":
+            self._send_json(
+                {"error": "Forbidden: Missing or invalid X-Requested-With header"},
+                status=403,
+            )
+            return False
+
+        origin = self.headers.get("Origin")
+        if origin:
+            server_port = getattr(self.server, "server_port", 8080)
+            allowed = {
+                f"http://localhost:{server_port}",
+                f"http://127.0.0.1:{server_port}",
+            }
+            if server_port in (80, 443):
+                allowed.update({"http://localhost", "http://127.0.0.1"})
+
+            if origin not in allowed:
+                self._send_json(
+                    {"error": f"Forbidden: Cross-origin request from {origin} rejected"},
+                    status=403,
+                )
+                return False
+        return True
+
     def do_GET(self) -> None:  # noqa: N802
         if not self._validate_host():
             return
 
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+
+        if path.startswith("/api/requeue") or path == "/api/enqueue":
+            self._send_json({"error": "Method Not Allowed"}, status=405)
+            return
 
         if path in ("", "/"):
             self._send_html(get_dashboard_html())
@@ -123,8 +155,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if not self._validate_host():
             return
 
-        parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
+        if path.startswith("/api/requeue/") or path == "/api/enqueue":
+            if not self._validate_csrf_and_origin():
+                return
 
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length) if content_length > 0 else b""

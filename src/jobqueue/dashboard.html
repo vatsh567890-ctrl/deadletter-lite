@@ -772,7 +772,10 @@
 
     async function requeueJob(jobId) {
       try {
-        const res = await fetch(`/api/requeue/${jobId}`, { method: "POST" });
+        const res = await fetch(`/api/requeue/${encodeURIComponent(jobId)}`, {
+          method: "POST",
+          headers: { "X-Requested-With": "jobqueue" }
+        });
         if (res.ok) {
           fetchStats();
           fetchJobs();
@@ -821,7 +824,10 @@
       try {
         const res = await fetch("/api/enqueue", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "jobqueue"
+          },
           body: JSON.stringify({
             task_name: taskName,
             payload: payloadStr,
