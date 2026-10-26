@@ -470,7 +470,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title" id="modal-job-title">Job Details</div>
-        <button class="btn btn-secondary" onclick="closeModal('job-modal')">Close</button>
+        <button id="btn-close-job-modal" class="btn btn-secondary">Close</button>
       </div>
       <div class="modal-body" id="modal-job-content">
         <!-- Injected dynamically -->
@@ -483,7 +483,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title">Enqueue New Job</div>
-        <button class="btn btn-secondary" onclick="closeModal('enqueue-modal')">Cancel</button>
+        <button id="btn-close-enqueue-modal" class="btn btn-secondary">Cancel</button>
       </div>
       <div class="modal-body">
         <div style="display: flex; flex-direction: column; gap: 0.5rem;">
@@ -808,6 +808,14 @@
 
     document.getElementById("btn-new-job").addEventListener("click", () => {
       document.getElementById("enqueue-modal").classList.add("open");
+    });
+
+    document.getElementById("btn-close-job-modal").addEventListener("click", () => {
+      closeModal("job-modal");
+    });
+
+    document.getElementById("btn-close-enqueue-modal").addEventListener("click", () => {
+      closeModal("enqueue-modal");
     });
 
     document.getElementById("btn-submit-job").addEventListener("click", async () => {

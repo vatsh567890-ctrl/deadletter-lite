@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import secrets
 import urllib.parse
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -42,14 +43,26 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Security-Policy", "default-src 'self'")
         self.end_headers()
         self.wfile.write(body)
 
     def _send_html(self, html: str, status: int = 200) -> None:
-        body = html.encode("utf-8")
+        nonce = secrets.token_hex(16)
+        html_with_nonce = html.replace("<script>", f'<script nonce="{nonce}">')
+        body = html_with_nonce.encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header(
+            "Content-Security-Policy",
+            f"default-src 'self'; script-src 'self' 'nonce-{nonce}'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "connect-src 'self'; img-src 'self' data:",
+        )
         self.end_headers()
         self.wfile.write(body)
 
@@ -172,7 +185,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             )
             return
 
-        body = self.rfile.read(min(content_length, MAX_REQUEST_BODY_SIZE)) if content_length > 0 else b""
+        body = b""
+        if content_length > 0:
+            body = self.rfile.read(min(content_length, MAX_REQUEST_BODY_SIZE))
 
         q = JobQueue(self.db_path)
         try:
