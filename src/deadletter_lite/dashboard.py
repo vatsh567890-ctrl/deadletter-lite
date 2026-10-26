@@ -11,10 +11,10 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any
 
-from jobqueue.models import InvalidStateTransitionError, JobNotFoundError, JobStatus
-from jobqueue.queue import JobQueue
+from deadletter_lite.models import InvalidStateTransitionError, JobNotFoundError, JobStatus
+from deadletter_lite.queue import JobQueue
 
-logger = logging.getLogger("jobqueue.dashboard")
+logger = logging.getLogger("deadletter_lite.dashboard")
 
 MAX_REQUEST_BODY_SIZE = 16 * 1024  # 16 KB capped request body
 

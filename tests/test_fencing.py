@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from jobqueue.clock import FakeClock
-from jobqueue.models import (
+from deadletter_lite.clock import FakeClock
+from deadletter_lite.models import (
     AttemptOutcome,
     JobStatus,
     LeaseLostError,
 )
-from jobqueue.queue import JobQueue
+from deadletter_lite.queue import JobQueue
 
 
 def test_fencing_stale_worker_ack_rejected(queue: JobQueue, fake_clock: FakeClock) -> None:

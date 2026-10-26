@@ -8,10 +8,10 @@ import time
 import urllib.request
 from pathlib import Path
 
-from jobqueue.dashboard import create_dashboard_server
-from jobqueue.models import JobStatus
-from jobqueue.queue import JobQueue
-from jobqueue.worker import WorkerPool
+from deadletter_lite.dashboard import create_dashboard_server
+from deadletter_lite.models import JobStatus
+from deadletter_lite.queue import JobQueue
+from deadletter_lite.worker import WorkerPool
 
 
 def test_e2e_workers_and_dashboard_counts(tmp_path: Path) -> None:

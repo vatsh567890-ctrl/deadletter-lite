@@ -1,4 +1,8 @@
-"""jobqueue: A lightweight, production-quality job queue in Python 3.11+."""
+"""Backward-compatibility shim for deadletter_lite."""
 
-__version__ = "0.1.0"
-__author__ = "vatsh567890-ctrl"
+from __future__ import annotations
+
+import deadletter_lite
+
+__version__ = deadletter_lite.__version__
+__author__ = deadletter_lite.__author__

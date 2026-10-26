@@ -1,4 +1,4 @@
-"""Command-line interface (CLI) for jobqueue."""
+"""Command-line interface (CLI) for deadletter-lite."""
 
 from __future__ import annotations
 
@@ -8,21 +8,21 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from jobqueue.dashboard import run_dashboard
-from jobqueue.models import JobNotFoundError, JobStatus
-from jobqueue.queue import JobQueue
-from jobqueue.worker import WorkerPool
+from deadletter_lite.dashboard import run_dashboard
+from deadletter_lite.models import JobNotFoundError, JobStatus
+from deadletter_lite.queue import JobQueue
+from deadletter_lite.worker import WorkerPool
 
 
 def get_default_db() -> str:
     """Return default database path from env or fallback."""
-    return os.environ.get("JOBQUEUE_DB", "./jobqueue.db")
+    return os.environ.get("DEADLETTER_DB", os.environ.get("JOBQUEUE_DB", "./deadletter.db"))
 
 
 def build_parser() -> argparse.ArgumentParser:
     """Construct CLI argument parser with subcommands."""
     parser = argparse.ArgumentParser(
-        prog="jobqueue",
+        prog="deadletter-lite",
         description="A lightweight, production-quality job queue backed by SQLite",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)

@@ -5,10 +5,10 @@ from __future__ import annotations
 import random
 from pathlib import Path
 
-from jobqueue.backoff import compute_max_backoff
-from jobqueue.clock import FakeClock
-from jobqueue.models import AttemptOutcome, JobStatus
-from jobqueue.queue import JobQueue
+from deadletter_lite.backoff import compute_max_backoff
+from deadletter_lite.clock import FakeClock
+from deadletter_lite.models import AttemptOutcome, JobStatus
+from deadletter_lite.queue import JobQueue
 
 
 def test_compute_backoff_formula_limits() -> None:

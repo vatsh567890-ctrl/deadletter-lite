@@ -9,9 +9,9 @@ from typing import Any
 
 import pytest
 
-from jobqueue.models import JobStatus
-from jobqueue.queue import JobQueue
-from jobqueue.storage import immediate_transaction
+from deadletter_lite.models import JobStatus
+from deadletter_lite.queue import JobQueue
+from deadletter_lite.storage import immediate_transaction
 
 
 def _stress_worker_entry(

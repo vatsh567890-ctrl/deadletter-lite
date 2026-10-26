@@ -11,9 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from jobqueue.dashboard import create_dashboard_server
-from jobqueue.models import JobStatus
-from jobqueue.queue import JobQueue
+from deadletter_lite.dashboard import create_dashboard_server
+from deadletter_lite.models import JobStatus
+from deadletter_lite.queue import JobQueue
 
 
 @pytest.fixture

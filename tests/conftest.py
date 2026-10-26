@@ -8,10 +8,15 @@ from pathlib import Path
 
 import pytest
 
-from jobqueue.clock import FakeClock
-from jobqueue.queue import JobQueue
+from deadletter_lite.clock import FakeClock
+from deadletter_lite.queue import JobQueue
 
 ENV_VARS_TO_CLEAR = [
+    "DEADLETTER_DB",
+    "DEADLETTER_HOST",
+    "DEADLETTER_PORT",
+    "DEADLETTER_CONCURRENCY",
+    "DEADLETTER_HANDLERS",
     "JOBQUEUE_DB",
     "JOBQUEUE_HOST",
     "JOBQUEUE_PORT",

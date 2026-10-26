@@ -11,11 +11,11 @@ import time
 from pathlib import Path
 from typing import Any
 
-from jobqueue.clock import FakeClock
-from jobqueue.models import AttemptOutcome, JobStatus
-from jobqueue.queue import JobQueue
-from jobqueue.registry import Registry
-from jobqueue.worker import Worker
+from deadletter_lite.clock import FakeClock
+from deadletter_lite.models import AttemptOutcome, JobStatus
+from deadletter_lite.queue import JobQueue
+from deadletter_lite.registry import Registry
+from deadletter_lite.worker import Worker
 
 
 def test_worker_successful_job_execution(tmp_path: Path) -> None:
@@ -280,7 +280,7 @@ def test_worker_graceful_shutdown_releases_job(tmp_path: Path) -> None:
 
 def test_worker_pool_execution_with_handlers_module(tmp_path: Path) -> None:
     """WorkerPool starts child processes, imports handlers module, and processes jobs."""
-    from jobqueue.worker import WorkerPool
+    from deadletter_lite.worker import WorkerPool
 
     db_path = tmp_path / "worker_pool.db"
     q = JobQueue(db_path)

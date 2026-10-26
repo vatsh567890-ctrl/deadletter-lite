@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from jobqueue.models import (
+from deadletter_lite.models import (
     Attempt,
     AttemptOutcome,
     Job,
@@ -148,7 +148,7 @@ class Storage:
         created_at: float,
     ) -> Job:
         """Insert a newly enqueued job."""
-        from jobqueue.models import MAX_PAYLOAD_SIZE
+        from deadletter_lite.models import MAX_PAYLOAD_SIZE
 
         if len(payload.encode("utf-8")) > MAX_PAYLOAD_SIZE:
             msg = f"Payload size exceeds limit of {MAX_PAYLOAD_SIZE} bytes"
@@ -431,7 +431,7 @@ class Storage:
             raise JobNotFoundError(msg)
 
         if job.status != JobStatus.DEAD:
-            from jobqueue.models import InvalidStateTransitionError
+            from deadletter_lite.models import InvalidStateTransitionError
 
             msg = f"Cannot requeue job {job_id} in status '{job.status.value}'. Must be 'dead'."
             raise InvalidStateTransitionError(msg)

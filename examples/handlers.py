@@ -6,7 +6,7 @@ import json
 import time
 from typing import Any
 
-from jobqueue.registry import task
+from deadletter_lite.registry import task
 
 _FLAKY_COUNTER: dict[str, int] = {}
 

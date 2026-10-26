@@ -6,7 +6,7 @@ import importlib
 from collections.abc import Callable
 from typing import Any, overload
 
-from jobqueue.models import TaskNotFoundError
+from deadletter_lite.models import TaskNotFoundError
 
 HandlerFunc = Callable[[str], Any]
 

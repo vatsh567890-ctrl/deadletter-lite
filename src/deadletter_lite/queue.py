@@ -6,9 +6,9 @@ import json
 import uuid
 from pathlib import Path
 
-from jobqueue.backoff import RngProtocol, compute_backoff
-from jobqueue.clock import Clock, SystemClock
-from jobqueue.models import (
+from deadletter_lite.backoff import RngProtocol, compute_backoff
+from deadletter_lite.clock import Clock, SystemClock
+from deadletter_lite.models import (
     Attempt,
     AttemptOutcome,
     InvalidStateTransitionError,
@@ -17,7 +17,7 @@ from jobqueue.models import (
     JobStatus,
     LeaseLostError,
 )
-from jobqueue.storage import Storage
+from deadletter_lite.storage import Storage
 
 
 class JobQueue:

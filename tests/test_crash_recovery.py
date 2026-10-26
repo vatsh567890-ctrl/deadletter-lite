@@ -9,8 +9,8 @@ from typing import Any
 
 import pytest
 
-from jobqueue.models import AttemptOutcome, JobStatus
-from jobqueue.queue import JobQueue
+from deadletter_lite.models import AttemptOutcome, JobStatus
+from deadletter_lite.queue import JobQueue
 
 
 def _crashing_worker_process(db_path_str: str, worker_id: str, started_event: Any) -> None:

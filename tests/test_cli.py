@@ -7,9 +7,9 @@ import os
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-from jobqueue.cli import main
-from jobqueue.models import JobStatus
-from jobqueue.queue import JobQueue
+from deadletter_lite.cli import main
+from deadletter_lite.models import JobStatus
+from deadletter_lite.queue import JobQueue
 
 
 def test_cli_enqueue_and_inspect(tmp_path: Path) -> None:

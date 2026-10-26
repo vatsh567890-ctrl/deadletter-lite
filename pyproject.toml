@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "jobqueue"
+name = "deadletter-lite"
 version = "0.1.0"
 description = "A lightweight, production-quality job queue in Python 3.11+ backed by SQLite"
 readme = "README.md"
@@ -24,7 +24,8 @@ dev = [
 ]
 
 [project.scripts]
-jobqueue = "jobqueue.cli:main"
+deadletter-lite = "deadletter_lite.cli:main"
+jobqueue = "deadletter_lite.cli:main"
 
 [tool.ruff]
 line-length = 100

@@ -1,11 +1,11 @@
-# jobqueue
+# deadletter-lite
 
 A lightweight, production-quality job queue in Python 3.11+ providing durable SQLite storage, worker processes with retries and exponential backoff, a dead-letter queue, a CLI, and a local dashboard.
 
 Author: vatsh567890-ctrl
 
 ## Architecture & Single-Machine Environment
-`jobqueue` runs entirely on a single machine. It uses the Python standard library and SQLite in Write-Ahead Logging (WAL) mode for high-concurrency, low-overhead job execution without external daemon requirements like Redis or Celery.
+`deadletter-lite` runs entirely on a single machine. It uses the Python standard library and SQLite in Write-Ahead Logging (WAL) mode for high-concurrency, low-overhead job execution without external daemon requirements like Redis or Celery.
 
 ## Delivery Semantics
 - **At-least-once execution**: A job can execute more than once if a worker process crashes or terminates after performing work but prior to acknowledging completion to the database. Handlers must be idempotent. Exactly-once execution is not claimed.
@@ -34,19 +34,19 @@ pip install -e ".[dev]"
 
 ```bash
 # Enqueue a task
-jobqueue enqueue --task echo --payload '{"message": "hello"}' --max-attempts 3
+deadletter-lite enqueue --task echo --payload '{"message": "hello"}' --max-attempts 3
 
 # Start worker processes
-jobqueue worker --db ./jobqueue.db --concurrency 4 --handlers examples.handlers
+deadletter-lite worker --db ./deadletter.db --concurrency 4 --handlers examples.handlers
 
 # Inspect jobs
-jobqueue inspect --status queued --limit 20
+deadletter-lite inspect --status queued --limit 20
 
 # Requeue a dead job
-jobqueue requeue <JOB_ID>
+deadletter-lite requeue <JOB_ID>
 
 # Start local dashboard
-jobqueue dashboard --db ./jobqueue.db --port 8080
+deadletter-lite dashboard --db ./deadletter.db --port 8080
 ```
 
 ## Running Tests

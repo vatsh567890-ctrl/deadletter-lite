@@ -16,18 +16,18 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from jobqueue.clock import Clock, SystemClock
-from jobqueue.models import (
+from deadletter_lite.clock import Clock, SystemClock
+from deadletter_lite.models import (
     AttemptOutcome,
     HandlerTimeoutError,
     Job,
     LeaseLostError,
     TaskNotFoundError,
 )
-from jobqueue.queue import JobQueue
-from jobqueue.registry import Registry, default_registry
+from deadletter_lite.queue import JobQueue
+from deadletter_lite.registry import Registry, default_registry
 
-logger = logging.getLogger("jobqueue.worker")
+logger = logging.getLogger("deadletter_lite.worker")
 
 
 class Worker:

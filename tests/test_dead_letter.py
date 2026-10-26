@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from jobqueue.clock import FakeClock
-from jobqueue.models import AttemptOutcome, JobStatus
-from jobqueue.queue import JobQueue
+from deadletter_lite.clock import FakeClock
+from deadletter_lite.models import AttemptOutcome, JobStatus
+from deadletter_lite.queue import JobQueue
 
 
 def test_dead_letter_exhaustion_and_requeue(tmp_path: Path) -> None:
