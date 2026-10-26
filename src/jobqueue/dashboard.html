@@ -548,34 +548,92 @@
         j.task_name.toLowerCase().includes(search)
       );
 
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function renderJobsTable() {
+      const tbody = document.getElementById("jobs-table-body");
+      const search = document.getElementById("search-box").value.toLowerCase();
+      const filtered = jobsData.filter(j => 
+        (j.id && j.id.toLowerCase().includes(search)) || 
+        (j.task_name && j.task_name.toLowerCase().includes(search))
+      );
+
+      tbody.innerHTML = "";
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem;">No jobs found</td></tr>`;
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 7;
+        td.style.cssText = "text-align: center; color: var(--text-muted); padding: 3rem;";
+        td.textContent = "No jobs found";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
         return;
       }
 
-      tbody.innerHTML = filtered.map(job => {
-        const dateStr = new Date(job.updated_at * 1000).toLocaleTimeString();
-        const requeueBtn = job.status === "dead" 
-          ? `<button class="btn btn-requeue" onclick="event.stopPropagation(); requeueJob('${job.id}')">Requeue</button>`
-          : "";
+      for (const job of filtered) {
+        const tr = document.createElement("tr");
+        tr.addEventListener("click", () => inspectJob(job.id));
 
-        return `
-          <tr onclick="inspectJob('${job.id}')">
-            <td class="font-mono">${job.id.substring(0, 8)}...</td>
-            <td style="font-weight: 500;">${job.task_name}</td>
-            <td><span class="badge ${job.status}">${job.status}</span></td>
-            <td>${job.attempts} / ${job.max_attempts}</td>
-            <td class="font-mono">${job.queue_name}</td>
-            <td style="color: var(--text-muted);">${dateStr}</td>
-            <td style="text-align: right;">${requeueBtn}</td>
-          </tr>
-        `;
-      }).join("");
+        const tdId = document.createElement("td");
+        tdId.className = "font-mono";
+        tdId.textContent = job.id.substring(0, 8) + "...";
+        tr.appendChild(tdId);
+
+        const tdTask = document.createElement("td");
+        tdTask.style.fontWeight = "500";
+        tdTask.textContent = job.task_name;
+        tr.appendChild(tdTask);
+
+        const tdStatus = document.createElement("td");
+        const badge = document.createElement("span");
+        badge.className = "badge " + job.status;
+        badge.textContent = job.status;
+        tdStatus.appendChild(badge);
+        tr.appendChild(tdStatus);
+
+        const tdAttempts = document.createElement("td");
+        tdAttempts.textContent = `${job.attempts} / ${job.max_attempts}`;
+        tr.appendChild(tdAttempts);
+
+        const tdQueue = document.createElement("td");
+        tdQueue.className = "font-mono";
+        tdQueue.textContent = job.queue_name;
+        tr.appendChild(tdQueue);
+
+        const tdUpdated = document.createElement("td");
+        tdUpdated.style.color = "var(--text-muted)";
+        tdUpdated.textContent = new Date(job.updated_at * 1000).toLocaleTimeString();
+        tr.appendChild(tdUpdated);
+
+        const tdAction = document.createElement("td");
+        tdAction.style.textAlign = "right";
+        if (job.status === "dead") {
+          const btn = document.createElement("button");
+          btn.className = "btn btn-requeue";
+          btn.textContent = "Requeue";
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            requeueJob(job.id);
+          });
+          tdAction.appendChild(btn);
+        }
+        tr.appendChild(tdAction);
+
+        tbody.appendChild(tr);
+      }
     }
 
     async function inspectJob(jobId) {
       try {
-        const res = await fetch(`/api/jobs/${jobId}`);
+        const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`);
         if (!res.ok) return;
         const data = await res.json();
         const job = data.job;
@@ -586,46 +644,125 @@
           payloadPretty = JSON.stringify(JSON.parse(job.payload), null, 2);
         } catch (_) {}
 
-        const attemptsHtml = attempts.map(att => `
-          <div class="attempt-item">
-            <div class="attempt-meta">
-              <span>Attempt #${att.attempt_number} (Worker: <span class="font-mono">${att.worker_id}</span>)</span>
-              <span class="badge ${att.outcome}">${att.outcome}</span>
-            </div>
-            ${att.error ? `<div class="attempt-error">${att.error}</div>` : ""}
-          </div>
-        `).join("") || `<div style="color: var(--text-muted); font-size: 0.85rem;">No attempts recorded yet.</div>`;
-
         const modalBody = document.getElementById("modal-job-content");
-        modalBody.innerHTML = `
-          <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">JOB ID</div>
-            <div class="font-mono" style="font-size: 0.95rem; font-weight: 600;">${job.id}</div>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">TASK</div>
-              <div style="font-weight: 500;">${job.task_name}</div>
-            </div>
-            <div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">STATUS</div>
-              <span class="badge ${job.status}">${job.status}</span>
-            </div>
-          </div>
-          <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">PAYLOAD</div>
-            <div class="code-box">${payloadPretty}</div>
-          </div>
-          <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">ATTEMPTS HISTORY</div>
-            <div class="attempts-timeline">${attemptsHtml}</div>
-          </div>
-          ${job.status === "dead" ? `
-            <button class="btn btn-requeue" style="align-self: flex-start; margin-top: 0.5rem;" onclick="requeueJob('${job.id}'); closeModal('job-modal');">
-              Requeue Job
-            </button>
-          ` : ""}
-        `;
+        modalBody.innerHTML = "";
+
+        // Job ID block
+        const idBlock = document.createElement("div");
+        const idLabel = document.createElement("div");
+        idLabel.style.cssText = "font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;";
+        idLabel.textContent = "JOB ID";
+        const idVal = document.createElement("div");
+        idVal.className = "font-mono";
+        idVal.style.cssText = "font-size: 0.95rem; font-weight: 600;";
+        idVal.textContent = job.id;
+        idBlock.appendChild(idLabel);
+        idBlock.appendChild(idVal);
+        modalBody.appendChild(idBlock);
+
+        // Task & Status Grid
+        const gridBlock = document.createElement("div");
+        gridBlock.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;";
+
+        const taskCol = document.createElement("div");
+        const taskLabel = document.createElement("div");
+        taskLabel.style.cssText = "font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;";
+        taskLabel.textContent = "TASK";
+        const taskVal = document.createElement("div");
+        taskVal.style.fontWeight = "500";
+        taskVal.textContent = job.task_name;
+        taskCol.appendChild(taskLabel);
+        taskCol.appendChild(taskVal);
+        gridBlock.appendChild(taskCol);
+
+        const statusCol = document.createElement("div");
+        const statusLabel = document.createElement("div");
+        statusLabel.style.cssText = "font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;";
+        statusLabel.textContent = "STATUS";
+        const statusBadge = document.createElement("span");
+        statusBadge.className = "badge " + job.status;
+        statusBadge.textContent = job.status;
+        statusCol.appendChild(statusLabel);
+        statusCol.appendChild(statusBadge);
+        gridBlock.appendChild(statusCol);
+
+        modalBody.appendChild(gridBlock);
+
+        // Payload block
+        const payloadBlock = document.createElement("div");
+        const payloadLabel = document.createElement("div");
+        payloadLabel.style.cssText = "font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;";
+        payloadLabel.textContent = "PAYLOAD";
+        const payloadBox = document.createElement("div");
+        payloadBox.className = "code-box";
+        payloadBox.textContent = payloadPretty;
+        payloadBlock.appendChild(payloadLabel);
+        payloadBlock.appendChild(payloadBox);
+        modalBody.appendChild(payloadBlock);
+
+        // Attempts history block
+        const attemptsBlock = document.createElement("div");
+        const attemptsLabel = document.createElement("div");
+        attemptsLabel.style.cssText = "font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;";
+        attemptsLabel.textContent = "ATTEMPTS HISTORY";
+        attemptsBlock.appendChild(attemptsLabel);
+
+        const timeline = document.createElement("div");
+        timeline.className = "attempts-timeline";
+
+        if (attempts.length === 0) {
+          const emptyDiv = document.createElement("div");
+          emptyDiv.style.cssText = "color: var(--text-muted); font-size: 0.85rem;";
+          emptyDiv.textContent = "No attempts recorded yet.";
+          timeline.appendChild(emptyDiv);
+        } else {
+          for (const att of attempts) {
+            const item = document.createElement("div");
+            item.className = "attempt-item";
+
+            const meta = document.createElement("div");
+            meta.className = "attempt-meta";
+
+            const infoSpan = document.createElement("span");
+            infoSpan.textContent = `Attempt #${att.attempt_number} (Worker: `;
+            const workerCode = document.createElement("span");
+            workerCode.className = "font-mono";
+            workerCode.textContent = att.worker_id;
+            infoSpan.appendChild(workerCode);
+            infoSpan.appendChild(document.createTextNode(")"));
+            meta.appendChild(infoSpan);
+
+            const outcomeBadge = document.createElement("span");
+            outcomeBadge.className = "badge " + att.outcome;
+            outcomeBadge.textContent = att.outcome;
+            meta.appendChild(outcomeBadge);
+
+            item.appendChild(meta);
+
+            if (att.error) {
+              const errDiv = document.createElement("div");
+              errDiv.className = "attempt-error";
+              errDiv.textContent = att.error;
+              item.appendChild(errDiv);
+            }
+
+            timeline.appendChild(item);
+          }
+        }
+        attemptsBlock.appendChild(timeline);
+        modalBody.appendChild(attemptsBlock);
+
+        if (job.status === "dead") {
+          const requeueBtn = document.createElement("button");
+          requeueBtn.className = "btn btn-requeue";
+          requeueBtn.style.cssText = "align-self: flex-start; margin-top: 0.5rem;";
+          requeueBtn.textContent = "Requeue Job";
+          requeueBtn.addEventListener("click", () => {
+            requeueJob(job.id);
+            closeModal("job-modal");
+          });
+          modalBody.appendChild(requeueBtn);
+        }
 
         document.getElementById("job-modal").classList.add("open");
       } catch (err) {
