@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import multiprocessing as mp
+import os
+import signal
+import sys
 import threading
 import time
 from pathlib import Path
@@ -181,44 +185,96 @@ def test_worker_heartbeat_lease_renewal(tmp_path: Path) -> None:
     verify_q.close()
 
 
-def test_worker_graceful_shutdown_releases_job(tmp_path: Path) -> None:
-    """Worker releases uncompleted claimed job back to queued upon shutdown."""
-    db_path = tmp_path / "worker_shutdown.db"
-    q = JobQueue(db_path)
-
-    reg = Registry()
-    task_started = threading.Event()
+def _graceful_proc_target(
+    db_path_str: str,
+    worker_id: str,
+    started_event: Any,
+    finish_flag: Any,
+    stop_signal_event: Any,
+) -> None:
+    """Worker process target that registers signal handlers and processes job."""
     stop_event = threading.Event()
 
-    @reg.register("slow_task")
-    def slow_task_handler(payload: str) -> None:
-        task_started.set()
-        # Simulate long operation while shutdown is requested
-        time.sleep(0.5)
+    def handle_sig(sig: int, frame: Any) -> None:
+        stop_event.set()
 
-    job = q.enqueue("slow_task", {"step": 1})
-    q.close()
+    signal.signal(signal.SIGINT, handle_sig)
+    signal.signal(signal.SIGTERM, handle_sig)
+
+    def stop_listener() -> None:
+        stop_signal_event.wait()
+        handle_sig(signal.SIGTERM, None)
+
+    listener_thread = threading.Thread(target=stop_listener, daemon=True)
+    listener_thread.start()
+
+    reg = Registry()
+
+    @reg.register("graceful_task")
+    def graceful_task(payload: str) -> None:
+        started_event.set()
+        for _ in range(50):
+            if stop_event.is_set():
+                return
+            time.sleep(0.05)
+        finish_flag.set()
 
     worker = Worker(
-        db_path,
-        worker_id="worker-shutdown",
+        db_path_str,
+        worker_id=worker_id,
         registry=reg,
         stop_event=stop_event,
+        poll_interval=0.05,
     )
+    worker.run()
 
-    t = threading.Thread(target=worker.run)
-    t.start()
 
-    assert task_started.wait(timeout=2.0)
-    # Trigger graceful stop while job is being processed
-    stop_event.set()
-    t.join(timeout=3.0)
+def test_worker_graceful_shutdown_releases_job(tmp_path: Path) -> None:
+    """Send real SIGTERM to worker process and assert exact job state."""
+    db_path = tmp_path / "worker_shutdown.db"
+    q = JobQueue(db_path)
+    job = q.enqueue("graceful_task", {"step": 1})
+    q.close()
 
-    # Verify job was released back to queued without incrementing attempts permanently
+    ctx = mp.get_context("spawn")
+    started_event = ctx.Event()
+    finish_flag = ctx.Event()
+    stop_signal_event = ctx.Event()
+
+    p = ctx.Process(
+        target=_graceful_proc_target,
+        args=(str(db_path), "worker-term", started_event, finish_flag, stop_signal_event),
+    )
+    p.start()
+
+    try:
+        assert started_event.wait(timeout=5.0)
+        # Send real SIGTERM to worker process (and notify bridge on Windows)
+        stop_signal_event.set()
+        if p.pid is not None and sys.platform != "win32":
+            os.kill(p.pid, signal.SIGTERM)
+        p.join(timeout=5.0)
+    finally:
+        if p.is_alive():
+            p.terminate()
+            p.join(timeout=1.0)
+
     verify_q = JobQueue(db_path)
-    released_job = verify_q.get(job.id)
-    assert released_job is not None
-    assert released_job.status in (JobStatus.QUEUED, JobStatus.DONE)
+    final_job = verify_q.get(job.id)
+    assert final_job is not None
+    attempts = verify_q.get_attempts(job.id)
+
+    if finish_flag.is_set():
+        assert final_job.status == JobStatus.DONE
+        assert final_job.attempts == 1
+        assert attempts[-1].outcome == AttemptOutcome.SUCCESS
+    else:
+        # Graceful shutdown released the job back to queue
+        assert final_job.status == JobStatus.QUEUED
+        assert final_job.attempts == 0
+        assert final_job.lease_token is None
+        assert attempts[-1].outcome == AttemptOutcome.CANCELLED
+
     verify_q.close()
 
 

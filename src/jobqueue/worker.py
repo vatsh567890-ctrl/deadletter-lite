@@ -133,9 +133,14 @@ class Worker:
             )
             self.execute_handler(handler, job.payload)
 
-            # Handler succeeded
+            # Handler completed
             heartbeat_stop.set()
             heartbeat_thread.join(timeout=1.0)
+
+            if self.stop_event.is_set():
+                q.release(job.id, lease_token, worker_id=self.worker_id)
+                logger.info("Released job %s back to queue on shutdown", job.id)
+                return False
 
             q.ack(job.id, lease_token, worker_id=self.worker_id)
             logger.info("Job %s acknowledged successfully", job.id)
