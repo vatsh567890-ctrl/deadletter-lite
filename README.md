@@ -2,7 +2,7 @@
 
 A lightweight, production-quality job queue in Python 3.11+ providing durable SQLite storage, worker processes with retries and exponential backoff, a dead-letter queue, a CLI, and a local dashboard.
 
-Author: [YOUR NAME]
+Author: vatsh567890-ctrl
 
 ## Architecture & Single-Machine Environment
 `jobqueue` runs entirely on a single machine. It uses the Python standard library and SQLite in Write-Ahead Logging (WAL) mode for high-concurrency, low-overhead job execution without external daemon requirements like Redis or Celery.

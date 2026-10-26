@@ -9,7 +9,7 @@ description = "A lightweight, production-quality job queue in Python 3.11+ backe
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    { name = "[YOUR NAME]" },
+    { name = "vatsh567890-ctrl" },
 ]
 license = { text = "MIT" }
 dependencies = []
