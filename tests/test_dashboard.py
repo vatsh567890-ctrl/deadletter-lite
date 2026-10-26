@@ -212,3 +212,20 @@ def test_dashboard_xss_job_name_escaped(running_server: tuple[str, Path, int]) -
         assert "<img src=x onerror=alert(1)>" not in html
         assert "<script>alert(2)</script>" not in html
         assert "Content-Security-Policy" in resp.headers
+
+
+def test_dashboard_new_db_path_creates_schema(tmp_path: Path) -> None:
+    """Dashboard works on a path that does not exist yet and creates schema."""
+    non_existent_db = tmp_path / "subdir" / "new_db.db"
+    assert not non_existent_db.exists()
+
+    server = create_dashboard_server(non_existent_db, host="127.0.0.1", port=0)
+    try:
+        assert non_existent_db.exists()
+        # Verify schema exists by querying via JobQueue
+        q = JobQueue(non_existent_db)
+        counts = q.count_by_status()
+        assert counts["queued"] == 0
+        q.close()
+    finally:
+        server.server_close()

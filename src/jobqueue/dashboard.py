@@ -236,8 +236,10 @@ def create_dashboard_server(
     host: str = "127.0.0.1",
     port: int = 8080,
 ) -> HTTPServer:
-    """Create and configure the Dashboard HTTP server."""
+    """Create and configure the Dashboard HTTP server, initializing schema on first open."""
     db_path_obj = Path(db_path).resolve()
+    init_q = JobQueue(db_path_obj)
+    init_q.close()
 
     def handler_factory(*args: Any, **kwargs: Any) -> DashboardRequestHandler:
         return DashboardRequestHandler(*args, db_path=db_path_obj, **kwargs)
