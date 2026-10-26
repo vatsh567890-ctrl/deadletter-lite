@@ -51,7 +51,30 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _validate_host(self) -> bool:
+        """Reject any request whose Host header is not localhost:PORT or 127.0.0.1:PORT."""
+        host_header = self.headers.get("Host", "").strip()
+        if not host_header:
+            self._send_json({"error": "Missing Host header"}, status=400)
+            return False
+
+        server_port = getattr(self.server, "server_port", 8080)
+        allowed = {
+            f"localhost:{server_port}",
+            f"127.0.0.1:{server_port}",
+        }
+        if server_port in (80, 443):
+            allowed.update({"localhost", "127.0.0.1"})
+
+        if host_header not in allowed:
+            self._send_json({"error": f"Invalid Host header: {host_header}"}, status=403)
+            return False
+        return True
+
     def do_GET(self) -> None:  # noqa: N802
+        if not self._validate_host():
+            return
+
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
 
@@ -97,6 +120,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             q.close()
 
     def do_POST(self) -> None:  # noqa: N802
+        if not self._validate_host():
+            return
+
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
 
